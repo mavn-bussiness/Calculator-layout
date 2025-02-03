@@ -1,0 +1,198 @@
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Calculator()
+                }
+            }
+        }
+    }
+}
+
+data class CalculatorState(
+    val displayText: String = "0",
+    val firstNumber: String = "",
+    val operation: String = "",
+    val newNumber: Boolean = true
+)
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun CalculatorPreview() {
+    MaterialTheme {
+        Calculator()
+    }
+}
+
+@Composable
+fun Calculator() {
+    var state by remember { mutableStateOf(CalculatorState()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Bottom)
+    ) {
+        // Display
+        Text(
+            text = state.displayText,
+            fontSize = 48.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp)
+                .wrapContentWidth(Alignment.End)
+        )
+
+        // Number Pad
+        listOf(
+            listOf("7", "8", "9", "÷"),
+            listOf("4", "5", "6", "×"),
+            listOf("1", "2", "3", "-"),
+            listOf("0", ".", "=", "+")
+        ).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                row.forEach { button ->
+                    when {
+                        button in setOf("÷", "×", "-", "+") -> {
+                            OperationButton(button) {
+                                state = state.copy(
+                                    firstNumber = state.displayText,
+                                    operation = button,
+                                    newNumber = true
+                                )
+                            }
+                        }
+                        button == "=" -> {
+                            CalculatorButton(button) {
+                                val result = calculateResult(
+                                    state.firstNumber,
+                                    state.operation,
+                                    state.displayText
+                                )
+                                if (result != null) {
+                                    state = state.copy(
+                                        displayText = result,
+                                        firstNumber = "",
+                                        operation = "",
+                                        newNumber = true
+                                    )
+                                }
+                            }
+                        }
+                        else -> {
+                            CalculatorButton(button) {
+                                val newDisplay = when {
+                                    state.newNumber -> button
+                                    button == "." && state.displayText.contains(".") -> 
+                                        state.displayText
+                                    else -> state.displayText + button
+                                }
+                                state = state.copy(
+                                    displayText = newDisplay,
+                                    newNumber = false
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Clear button
+        Button(
+            onClick = { state = CalculatorState() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+        ) {
+            Text("Clear")
+        }
+    }
+}
+
+@Composable
+fun CalculatorButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .padding(4.dp)
+            .size(72.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 24.sp
+        )
+    }
+}
+
+@Composable
+fun OperationButton(
+    operation: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .padding(4.dp)
+            .size(72.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.secondary
+        )
+    ) {
+        Text(
+            text = operation,
+            fontSize = 24.sp
+        )
+    }
+}
+
+private fun calculateResult(
+    firstNumber: String,
+    operation: String,
+    secondNumber: String
+): String? {
+    if (firstNumber.isEmpty() || operation.isEmpty()) return null
+
+    val num1 = firstNumber.toDoubleOrNull() ?: return null
+    val num2 = secondNumber.toDoubleOrNull() ?: return null
+
+    val result = when (operation) {
+        "+" -> num1 + num2
+        "-" -> num1 - num2
+        "×" -> num1 * num2
+        "÷" -> if (num2 != 0.0) num1 / num2 else return null
+        else -> return null
+    }
+
+    return if (result % 1 == 0.0) {
+        result.toLong().toString()
+    } else {
+        String.format("%.2f", result)
+    }
+}
