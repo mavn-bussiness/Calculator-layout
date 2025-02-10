@@ -1,3 +1,5 @@
+package com.example.calculatorsample
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -6,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,7 +57,13 @@ fun Calculator() {
         // Display
         Text(
             text = state.displayText,
-            fontSize = 48.sp,
+            fontSize = when {
+                state.displayText.length > 10 -> 32.sp
+                state.displayText.length > 15 -> 24.sp
+                else -> 48.sp
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 32.dp)
@@ -104,7 +113,7 @@ fun Calculator() {
                             CalculatorButton(button) {
                                 val newDisplay = when {
                                     state.newNumber -> button
-                                    button == "." && state.displayText.contains(".") -> 
+                                    button == "." && state.displayText.contains(".") ->
                                         state.displayText
                                     else -> state.displayText + button
                                 }
@@ -126,7 +135,7 @@ fun Calculator() {
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
         ) {
-            Text("Clear")
+            Text("Clear",)
         }
     }
 }
@@ -139,6 +148,7 @@ fun CalculatorButton(
 ) {
     Button(
         onClick = onClick,
+
         modifier = modifier
             .padding(4.dp)
             .size(72.dp)
@@ -176,23 +186,23 @@ private fun calculateResult(
     firstNumber: String,
     operation: String,
     secondNumber: String
-): String? {
-    if (firstNumber.isEmpty() || operation.isEmpty()) return null
+): String {
+    if (firstNumber.isEmpty() || operation.isEmpty()) return firstNumber
 
-    val num1 = firstNumber.toDoubleOrNull() ?: return null
-    val num2 = secondNumber.toDoubleOrNull() ?: return null
+    val num1 = firstNumber.toDoubleOrNull() ?: return "Error"
+    val num2 = secondNumber.toDoubleOrNull() ?: return "Error"
 
     val result = when (operation) {
         "+" -> num1 + num2
         "-" -> num1 - num2
         "×" -> num1 * num2
-        "÷" -> if (num2 != 0.0) num1 / num2 else return null
-        else -> return null
+        "÷" -> if (num2 == 0.0) return "NaN" else num1 / num2
+        else -> return "Error"
     }
 
     return if (result % 1 == 0.0) {
         result.toLong().toString()
     } else {
-        String.format("%.2f", result)
+        result.toBigDecimal().stripTrailingZeros().toPlainString()
     }
 }
